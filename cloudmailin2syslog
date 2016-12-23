@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+use Mojolicious::Lite;
+
+use Mojo::JSON qw/j true false/;
+use Mojo::JSON::Pointer;
+
+use lib 'Mojolicious-Plugin-Syslog/lib';
+
+app->config(hypnotoad => {listen => ['https://*:3000']});
+plugin 'Syslog' => {ident => 'at2lx', logopt => 'ndelay'};
+
+get '/' => sub {
+  my $c = shift;
+  $c->render(template => 'index');
+};
+
+post '/' => sub {
+  my $self = shift;
+  my $email = Mojo::JSON::Pointer->new($self->req->json);
+  my $syslog = {
+    'Content-Type' => $email->get('/headers/Content-Type'),
+    Date => $email->get('/headers/Date'),
+    From => $email->get('/headers/From'),
+    'Message-ID' => $email->get('/headers/Message-ID'),
+    Subject => $email->get('/headers/Subject'),
+    Body => $email->get('/plain'),
+  };
+  #$self->app->log->info($self->dumper($syslog));
+  $self->syslog->info(j($syslog));
+  $self->render(json => {ok => true});
+};
+
+app->start;
+__DATA__
+
+@@ index.html.ep
+% layout 'default';
+% title 'Welcome';
+<h1>Welcome to the LogXtender gateway, powered by the <%= link_to Mojolicious => 'http://mojolicious.org' %> real-time web framework!</h1>
+
+@@ layouts/default.html.ep
+<!DOCTYPE html>
+<html>
+  <head><title><%= title %></title></head>
+  <body><%= content %></body>
+</html>
