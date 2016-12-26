@@ -18,17 +18,19 @@ post '/' => sub {
   my $self = shift;
   my $email = Mojo::JSON::Pointer->new($self->req->json);
   my $syslog = {
-    'Content-Type' => $email->get('/headers/Content-Type'),
-    Date => $email->get('/headers/Date'),
     From => $email->get('/headers/From'),
-    'Message-ID' => $email->get('/headers/Message-ID'),
     Subject => $email->get('/headers/Subject'),
-    Body => $email->get('/plain'),
+    Body => shorten($email->get('/plain'), 600),
   };
   #$self->app->log->info($self->dumper($syslog));
   $self->syslog->info(j($syslog));
   $self->render(json => {ok => true});
 };
+
+sub shorten {
+  my ($self, $message, $length) = @_;
+  length($message) > $length ? substr($message, 0, $length).'...' : $message
+}
 
 app->start;
 __DATA__
